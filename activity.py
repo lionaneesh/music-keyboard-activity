@@ -55,9 +55,9 @@ import ttcommon.Config as Config
 
 
 def set_palette_list(instrument_list):
-    _menu_item = PaletteMenuItem(text_label=instrument_list[0][2])
+    _menu_item = PaletteMenuItem(text_label=instrument_list[0]['instrument_desc'])
     img = Gtk.Image()
-    img.set_from_pixbuf(instrument_list[0][1])
+    img.set_from_pixbuf(instrument_list[0]['pxb'])
     _menu_item.set_image(img)
     img.show()
 
@@ -85,12 +85,14 @@ def set_palette_list(instrument_list):
     xo_color = XoColor('white')
 
     for item in instrument_list:
-        menu_item = PaletteMenuItem(text_label=item[2])
+        menu_item = PaletteMenuItem(text_label=item['instrument_desc'])
         menu_item.set_size_request(style.GRID_CELL_SIZE * 3, -1)
         img = Gtk.Image()
-        img.set_from_pixbuf(item[1])
+        img.set_from_pixbuf(item['pxb'])
         menu_item.set_image(img)
         img.show()
+
+        menu_item.connect('button-release-event', item['callback'], item)
 
         #menu_item.connect('button-release-event', lambda x: x, item)
         grid.attach(menu_item, x, y, 1, 1)
@@ -351,14 +353,9 @@ class SimplePianoActivity(activity.Activity):
         vbox.set_homogeneous(False)
         self.load_instruments()
         vbox.pack_end(self.piano, True, True, 0)
-        self.scrolled = Gtk.ScrolledWindow()
-        vbox.pack_start(self.scrolled, False, False, 0)
-        self.scrolled.add(self.instruments_iconview)
         vbox.show_all()
         self.set_canvas(vbox)
         piano_height = Gdk.Screen.width() / 2
-        self.scrolled.set_size_request(
-            -1, Gdk.Screen.height() - piano_height - style.GRID_CELL_SIZE)
         self.connect('size-allocate', self.__allocate_cb)
 
     def __allocate_cb(self, widget, rect):
@@ -367,16 +364,10 @@ class SimplePianoActivity(activity.Activity):
 
     def resize(self, width, height):
         piano_height = width / 2
-        self.scrolled.set_size_request(
-            -1, height - piano_height - style.GRID_CELL_SIZE)
         return False
 
     def load_instruments(self):
-        self._instruments_store = Gtk.ListStore(str, GdkPixbuf.Pixbuf, str, str)
-        self._instruments_store.set_sort_column_id(0, Gtk.SortType.ASCENDING)
-        self.instruments_iconview = Gtk.IconView(self._instruments_store)
-        self.instruments_iconview.set_text_column(2)
-        self.instruments_iconview.set_pixbuf_column(1)
+        self._instruments_store = []
 
         # load the images
         images_path = os.path.join(activity.get_bundle_path(),
@@ -392,21 +383,20 @@ class SimplePianoActivity(activity.Activity):
             instrument_name = instrument_name[:instrument_name.find('.')]
             instrument_desc = \
                 self.instrumentDB.instNamed[instrument_name].nameTooltip
-            self._instruments_store.append([instrument_name, pxb,
-                                           instrument_desc, file_name])
+
+            self._instruments_store.append({"instrument_name": instrument_name,
+                                            "pxb": pxb,
+                                            "instrument_desc": instrument_desc,
+                                            "file_name": file_name,
+                                            "callback": self.__instrument_iconview_activated_cb})
 
         self._what_widget_contents = set_palette_list(self._instruments_store)
         self._what_widget.add(self._what_widget_contents)
         self._what_widget_contents.show()
 
-        self.instruments_iconview.connect(
-            'selection-changed', self.__instrument_iconview_activated_cb)
-
-    def __instrument_iconview_activated_cb(self, widget):
-        item = widget.get_selected_items()[0]
-        model= widget.get_model()
-        instrument_name = model[item][0]
-        self.setInstrument(instrument_name)
+    def __instrument_iconview_activated_cb(self, widget, event, item):
+        logging.error("Instrument Activated Callback");
+        self.setInstrument(item['instrument_name'])
 
     def set_notes_labels_cb(self, widget):
         self.piano.font_size = 16
@@ -435,6 +425,7 @@ class SimplePianoActivity(activity.Activity):
         self.add_events(Gdk.EventMask.BUTTON_PRESS_MASK)
 
     def setInstrument(self, instrument):
+        logging.error("Set Instrument: %s" % instrument)
         self.instrument = instrument
         self.keyboardStandAlone.setInstrument(instrument)
         self.csnd.load_instrument(instrument)
