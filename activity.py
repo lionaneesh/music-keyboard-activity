@@ -143,7 +143,7 @@ class FilterToolItem(Gtk.ToolButton):
         self._palette_invoker.props.toggle_palette = True
         self._palette_invoker.props.lock_palette = True
 
-        self.palette = Palette(_('Select filter'))
+        self.palette = Palette(_('Select Instrument'))
         self.palette.set_invoker(self._palette_invoker)
 
         self.props.palette.set_content(palette_content)
