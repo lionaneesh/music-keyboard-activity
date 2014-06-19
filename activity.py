@@ -254,6 +254,8 @@ class SimplePianoActivity(activity.Activity):
         self._what_search_button = FilterToolItem(
 			'view-type', _('Piano'), self._what_widget)
         self._what_widget.show()
+        separator = Gtk.SeparatorToolItem()
+        toolbar_box.toolbar.insert(separator, -1)
         toolbar_box.toolbar.insert(self._what_search_button, -1)
         self._what_search_button.show()
         self._what_search_button.set_is_important(True)
