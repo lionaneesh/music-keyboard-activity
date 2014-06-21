@@ -155,8 +155,10 @@ class FilterToolItem(Gtk.ToolButton):
         # FIXME: Ellipsis is not working on these labels.
         if label is None:
             label = self._label
+        """
         if len(label) > 10:
             label = label[0:7] + '...' + label[-7:]
+        """
         self._label_widget.set_markup(label)
         self._label = label
 
