@@ -53,6 +53,7 @@ from MiniSequencer import MiniSequencer
 from Loop import Loop
 import ttcommon.Config as Config
 
+MAX_PALETTE_WIDTH = 5
 
 def set_palette_list(instrument_list):
     _menu_item = PaletteMenuItem(text_label=instrument_list[0]['instrument_desc'],
@@ -61,10 +62,10 @@ def set_palette_list(instrument_list):
     menuitem_width = req2.width
     menuitem_height = req2.height
 
-    palette_width = Gdk.Screen.width() - style.GRID_CELL_SIZE
+    palette_width = Gdk.Screen.width() - style.GRID_CELL_SIZE * 3
     palette_height = Gdk.Screen.height() - style.GRID_CELL_SIZE * 3
 
-    nx = int(palette_width / menuitem_width)
+    nx = min(int(palette_width / menuitem_width), MAX_PALETTE_WIDTH)
     ny = min(int(palette_height / menuitem_height), len(instrument_list) + 1)
     if ny >= len(instrument_list):
         nx = 1
