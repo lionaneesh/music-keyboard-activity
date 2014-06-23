@@ -84,7 +84,8 @@ def set_palette_list(instrument_list):
     y = 0
     xo_color = XoColor('white')
 
-    for item in instrument_list:
+    for item in sorted(instrument_list,
+    cmp=lambda x,y: cmp(x['instrument_desc'], y['instrument_desc'])):
         menu_item = PaletteMenuItem(text_label=item['instrument_desc'],
                                     file_name=item['file_name'])
         menu_item.connect('button-release-event', item['callback'], item)
