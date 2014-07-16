@@ -63,6 +63,7 @@ from MiniSequencer import MiniSequencer
 from Loop import Loop
 from ttcommon.Config import imagefile
 import ttcommon.Config as Config
+import multiprocessing
 from math import log
 
 DRUMCOUNT = 6
@@ -453,10 +454,14 @@ class SimplePianoActivity(activity.Activity):
         activity.Activity.__init__(self, handle)
         self._what_list = []
 
+        self.playing_recording = False
         self.firstTime = False
         self.playing = False
         self.regularity = 0.7
         self._drums_store = []
+        self.recording = False
+        self.recorded_keys = []
+        self.is_valid_recording = False
 
         # we do not have collaboration features
         # make the share option insensitive
@@ -492,7 +497,33 @@ class SimplePianoActivity(activity.Activity):
         self.play_button.set_property('can-default', True)
         self.play_button.show()
 
-        self.play_button.connect('clicked', self.handlePlayButton)
+        self.play_recording_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_PLAY,
+                                                   Gtk.IconSize.BUTTON)
+        self.stop_pr_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_STOP,
+                                                   Gtk.IconSize.BUTTON)
+
+        self.stop_pr_image.show()
+        self.record_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_RECORD,
+                                                   Gtk.IconSize.BUTTON)
+        self.stop_record_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_STOP,
+                                                   Gtk.IconSize.BUTTON)
+
+        self.play_recording_button = Gtk.ToolButton()
+        self.play_recording_button.set_icon_widget(self.play_recording_image)
+        self.play_recording_button.set_property('can-default', True)
+        self.play_recording_button.show()
+        self.record_image.show()
+        self.stop_record_image.show()
+        self.record_button = Gtk.ToolButton()
+        self.record_button.set_icon_widget(self.record_image)
+        self.record_button.set_property('can-default', True)
+        self.record_button.show()
+        self.play_recording_button.set_sensitive(False)
+
+        self.record_button.connect('clicked', self.handleRecordButton)
+
+        self.play_recording_button.connect('clicked', self.handlePlayRecordingButton)
+
         beats_toolbar = ToolbarBox()
         beats_toolbar.toolbar.insert(self.play_button, -1)
 
@@ -579,6 +610,12 @@ class SimplePianoActivity(activity.Activity):
         self._what_widget_contents = None
         self._what_drum_widget_contents = None
 
+        separator = Gtk.SeparatorToolItem()
+        toolbar_box.toolbar.insert(separator, -1)
+
+        toolbar_box.toolbar.insert(self.record_button, -1)
+        toolbar_box.toolbar.insert(self.play_recording_button, -1)
+        
         separator = Gtk.SeparatorToolItem()
         separator.props.draw = False
         separator.set_expand(True)
@@ -852,6 +889,30 @@ class SimplePianoActivity(activity.Activity):
         if self.playing:
             self.csnd.loopStart()
 
+    def handlePlayRecordingButton(self, val):
+        if not self.playing_recording:
+            self.playing_recording = True
+            self.play_recording_button.set_icon_widget(self.stop_pr_image)
+            self.play_recording_thread = multiprocessing.Process(target=self._play_recorded_keys)
+            self.play_recording_thread.start()
+        else:
+            self.playing_recording = False
+            self.play_recording_button.set_icon_widget(self.play_recording_image)
+            self.play_recording_thread.terminate()
+
+
+    def handleRecordButton(self, val):
+        if not self.recording:
+            self.play_recording_button.set_sensitive(False)
+            self.recorded_keys = []
+            self.recording = True
+            self.record_button.set_icon_widget(self.stop_record_image)
+        else:
+            self.recording = False
+            self.record_button.set_icon_widget(self.record_image)
+            if len(self.recorded_keys) != 0:
+                self.play_recording_button.set_sensitive(True)
+
     def tempoSliderChange(self, widget, event):
         self._updateTempo(self.tempo_button.get_value())
         img = int(self.scale(self.tempo, PLAYER_TEMPO_LOWER,
@@ -967,11 +1028,26 @@ class SimplePianoActivity(activity.Activity):
         pass
         # self._recordToolbar.keyboardRecOverButton.set_sensitive( state )
 
+    def _play_recorded_keys(self):
+        print "Playing recording.."
+        prev_time = self.recorded_keys[0][0]
+        for letter in self.recorded_keys:
+            print letter
+            time.sleep(letter[0] - prev_time)
+            print "After delay", letter[0] - prev_time
+            self.__key_pressed_cb(None, letter[1], letter[2], letter[3])
+            prev_time = letter[0]
+
+        self.play_recording_button.set_icon_widget(self.stop_pr_image)
+
     def __key_pressed_cb(self, widget, octave_clicked, key_clicked, letter):
         logging.debug(
             'Pressed Octave: %d Key: %d Letter: %s' %
             (octave_clicked, key_clicked, letter))
         if letter in LETTERS_TO_KEY_CODES.keys():
+            if self.recording:
+                self.recorded_keys.append((time.time(), octave_clicked, key_clicked, letter))
+            print self.recorded_keys
             self.keyboardStandAlone.do_key_press(
                 LETTERS_TO_KEY_CODES[letter], None,
                 math.sqrt(self.instVolume * 0.01))
