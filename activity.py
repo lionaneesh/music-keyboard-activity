@@ -497,16 +497,17 @@ class SimplePianoActivity(activity.Activity):
         self.play_button.set_property('can-default', True)
         self.play_button.show()
 
-        self.play_recording_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_PLAY,
-                                                   Gtk.IconSize.BUTTON)
+        self.play_recording_image = \
+            Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_PLAY,
+                                     Gtk.IconSize.BUTTON)
         self.stop_pr_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_STOP,
-                                                   Gtk.IconSize.BUTTON)
+                                                      Gtk.IconSize.BUTTON)
 
         self.stop_pr_image.show()
         self.record_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_RECORD,
-                                                   Gtk.IconSize.BUTTON)
+                                                     Gtk.IconSize.BUTTON)
         self.stop_record_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_STOP,
-                                                   Gtk.IconSize.BUTTON)
+                                                          Gtk.IconSize.BUTTON)
 
         self.play_recording_button = Gtk.ToolButton()
         self.play_recording_button.set_icon_widget(self.play_recording_image)
@@ -521,8 +522,8 @@ class SimplePianoActivity(activity.Activity):
         self.play_recording_button.set_sensitive(False)
 
         self.record_button.connect('clicked', self.handleRecordButton)
-
-        self.play_recording_button.connect('clicked', self.handlePlayRecordingButton)
+        self.play_recording_button.connect('clicked',
+                                           self.handlePlayRecordingButton)
 
         beats_toolbar = ToolbarBox()
         beats_toolbar.toolbar.insert(self.play_button, -1)
@@ -615,7 +616,7 @@ class SimplePianoActivity(activity.Activity):
 
         toolbar_box.toolbar.insert(self.record_button, -1)
         toolbar_box.toolbar.insert(self.play_recording_button, -1)
-        
+
         separator = Gtk.SeparatorToolItem()
         separator.props.draw = False
         separator.set_expand(True)
@@ -893,13 +894,14 @@ class SimplePianoActivity(activity.Activity):
         if not self.playing_recording:
             self.playing_recording = True
             self.play_recording_button.set_icon_widget(self.stop_pr_image)
-            self.play_recording_thread = multiprocessing.Process(target=self._play_recorded_keys)
+            self.play_recording_thread = \
+                multiprocessing.Process(target=self._play_recorded_keys)
             self.play_recording_thread.start()
         else:
             self.playing_recording = False
-            self.play_recording_button.set_icon_widget(self.play_recording_image)
+            self.play_recording_button.set_icon_widget(
+                self.play_recording_image)
             self.play_recording_thread.terminate()
-
 
     def handleRecordButton(self, val):
         if not self.recording:
@@ -1046,7 +1048,10 @@ class SimplePianoActivity(activity.Activity):
             (octave_clicked, key_clicked, letter))
         if letter in LETTERS_TO_KEY_CODES.keys():
             if self.recording:
-                self.recorded_keys.append((time.time(), octave_clicked, key_clicked, letter))
+                self.recorded_keys.append((time.time(),
+                                           octave_clicked,
+                                           key_clicked,
+                                           letter))
             print self.recorded_keys
             self.keyboardStandAlone.do_key_press(
                 LETTERS_TO_KEY_CODES[letter], None,
