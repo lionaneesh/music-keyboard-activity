@@ -454,6 +454,8 @@ class SimplePianoActivity(activity.Activity):
         activity.Activity.__init__(self, handle)
         self._what_list = []
 
+        self.play_recording_thread = None
+
         self.playing_recording = False
         self.firstTime = False
         self.playing = False
@@ -501,6 +503,8 @@ class SimplePianoActivity(activity.Activity):
                                                    Gtk.IconSize.BUTTON)
         self.stop_pr_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_STOP,
                                                    Gtk.IconSize.BUTTON)
+
+        self.play_index = 0
 
         self.stop_pr_image.show()
         self.record_image = Gtk.Image.new_from_stock(Gtk.STOCK_MEDIA_RECORD,
@@ -893,12 +897,12 @@ class SimplePianoActivity(activity.Activity):
         if not self.playing_recording:
             self.playing_recording = True
             self.play_recording_button.set_icon_widget(self.stop_pr_image)
-            self.play_recording_thread = multiprocessing.Process(target=self._play_recorded_keys)
-            self.play_recording_thread.start()
+            self.play_recording_thread = GObject.timeout_add(100, self._play_recorded_keys)
+            self.playing_recording_thread = True
         else:
+            self.playing_recording_thread = False
             self.playing_recording = False
             self.play_recording_button.set_icon_widget(self.play_recording_image)
-            self.play_recording_thread.terminate()
 
 
     def handleRecordButton(self, val):
@@ -1029,16 +1033,41 @@ class SimplePianoActivity(activity.Activity):
         # self._recordToolbar.keyboardRecOverButton.set_sensitive( state )
 
     def _play_recorded_keys(self):
-        print "Playing recording.."
-        prev_time = self.recorded_keys[0][0]
-        for letter in self.recorded_keys:
-            print letter
-            time.sleep(letter[0] - prev_time)
-            print "After delay", letter[0] - prev_time
-            self.__key_pressed_cb(None, letter[1], letter[2], letter[3])
-            prev_time = letter[0]
+        GObject.source_remove(self.play_recording_thread)
+        print "Playing recording.. %d / %d" % (self.play_index, len(self.recorded_keys))
 
-        self.play_recording_button.set_icon_widget(self.stop_pr_image)
+        letter = self.recorded_keys[self.play_index]
+
+        time_difference = 0
+        if self.play_index == len(self.recorded_keys) - 1:
+            time_difference = self.recorded_keys[self.play_index][0] - self.recorded_keys[self.play_index - 1][0]
+        else:
+            next_time = self.recorded_keys[self.play_index + 1][0]
+            time_difference = next_time - letter[0]
+
+
+        if not self.playing_recording:
+            self.play_recording_button.set_icon_widget(self.play_recording_image)
+            return
+
+        if letter[-1] == 1:
+            self.keyboardStandAlone.do_key_release(
+                        LETTERS_TO_KEY_CODES[letter[3]])
+        else:
+            self.__key_pressed_cb(None, letter[1], letter[2], letter[3])
+
+        if self.play_index == len(self.recorded_keys) - 1:
+            print "Stopping playing recording now!"
+            self.play_index = 0
+            self.playing_recording_thread = False
+            self.play_recording_button.set_icon_widget(self.play_recording_image)
+            self.playing_recording = False
+            GObject.source_remove(self.play_recording_thread)
+        else:
+            self.play_index += 1
+            self.play_recording_thread = \
+                GObject.timeout_add(int((time_difference) * 1000),
+                                    self._play_recorded_keys)
 
     def __key_pressed_cb(self, widget, octave_clicked, key_clicked, letter):
         logging.debug(
@@ -1053,6 +1082,8 @@ class SimplePianoActivity(activity.Activity):
                 math.sqrt(self.instVolume * 0.01))
 
     def __key_released_cb(self, widget, octave_clicked, key_clicked, letter):
+        if self.recording:
+                self.recorded_keys.append((time.time(), octave_clicked, key_clicked, letter, 1))
         if letter in LETTERS_TO_KEY_CODES.keys():
             self.keyboardStandAlone.do_key_release(
                 LETTERS_TO_KEY_CODES[letter])
