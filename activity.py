@@ -63,7 +63,6 @@ from MiniSequencer import MiniSequencer
 from Loop import Loop
 from ttcommon.Config import imagefile
 import ttcommon.Config as Config
-import multiprocessing
 from math import log
 
 DRUMCOUNT = 6
