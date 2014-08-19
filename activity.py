@@ -65,7 +65,7 @@ from Loop import Loop
 from ttcommon.Config import imagefile
 import ttcommon.Config as Config
 from math import log
-
+from sugar3.datastore import datastore
 from sugar3.graphics.toggletoolbutton import ToggleToolButton
 
 DRUMCOUNT = 6
@@ -917,9 +917,37 @@ class SimplePianoActivity(activity.Activity):
             self.recorded_keys = []
             self.recording = True
             self.record_button.set_icon_widget(self.stop_record_image)
+            filename = "perf.wav"
+            self.csnd.inputMessage(Config.CSOUND_RECORD_PERF % filename)
         else:
             self.recording = False
             self.record_button.set_icon_widget(self.record_image)
+
+            TMP_DIR = "/tmp/"
+
+            filename = TMP_DIR + "piano.wav"
+            self.csnd.inputMessage(Config.CSOUND_STOP_RECORD_PERF % filename)
+            tmp_ogg = TMP_DIR + "piano.ogg"
+            command = "gst-launch-0.10 filesrc location=" + filename + \
+                      " ! wavparse ! audioconvert ! vorbisenc ! oggmux !  " + \
+                      "filesink location=" + tmp_ogg
+            command2 = "rm " + filename
+            os.system(command)
+            os.system(command2)
+
+            from datetime import datetime
+            title = 'Keyboard recording %s.ogg' % (
+                    datetime.now().isoformat(' '))
+
+            jobject = datastore.create()
+            jobject.metadata['title'] = title
+            jobject.metadata['keep'] = '1'
+            jobject.metadata['mime_type'] = 'audio/ogg'
+            jobject.file_path = tmp_ogg
+            datastore.write(jobject)
+
+            os.remove(tmp_ogg)
+
             if len(self.recorded_keys) != 0:
                 self.play_recording_button.set_sensitive(True)
 
